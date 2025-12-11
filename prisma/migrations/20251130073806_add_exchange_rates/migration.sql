@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN     "eurToInrRate" DECIMAL(65,30) DEFAULT 90,
+ADD COLUMN     "gbpToInrRate" DECIMAL(65,30) DEFAULT 105,
+ADD COLUMN     "usdToInrRate" DECIMAL(65,30) DEFAULT 84;

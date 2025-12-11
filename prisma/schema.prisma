@@ -1,0 +1,379 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEAM
+  CLIENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  REVIEW
+  IN_REVISION
+  DONE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PROFORMA
+  SENT
+  PAID
+}
+
+model User {
+
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?   // Optional for OAuth, required for credentials
+  role          Role      @default(CLIENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clientProfile ClientProfile?
+  ticketsCreated Ticket[] @relation("CreatedBy")
+  ticketsAssigned Ticket[] @relation("AssignedTickets")
+  managedTickets Ticket[] @relation("ManagedTickets")
+  comments      Comment[]
+  reactions     CommentReaction[]
+  revisionHistory RevisionHistory[]
+  teamMemberships ClientTeamMember[]
+}
+
+model ClientProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  
+  // Tax Information
+  gstNumber      String?
+  vatNumber      String?
+  taxId          String?
+  billingAddress String?
+  
+  // Client Resources
+  knowledgeBaseUrl String?  // URL to client's knowledge base or documentation
+  brandingKitUrl   String?  // URL to client's branding kit (logos, colors, etc.)
+  
+  projects       Project[]
+  invoices       Invoice[]
+  proposals      Proposal[]
+  contracts      Contract[]
+  teamMembers    ClientTeamMember[]
+}
+
+model ClientTeamMember {
+  id              String        @id @default(cuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String        @default("MEMBER") // OWNER, MEMBER
+  createdAt       DateTime      @default(now())
+  
+  @@unique([clientProfileId, userId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("ACTIVE") // ACTIVE, ARCHIVED
+  clientId    String
+  client      ClientProfile @relation(fields: [clientId], references: [id])
+  tickets     Ticket[]
+  
+  budget      Decimal?
+  currency    String   @default("USD")
+
+  // New Fields
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  services    Json?    // Array of { description: string, price: number }
+  billingType String?  // FIXED, HOURLY, RETAINER
+  billingSchedule Json? // { deposit: number, milestones: [] }
+
+  proposals   Proposal[]
+  contracts   Contract[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+model Proposal {
+  id          String   @id @default(cuid())
+  title       String
+  content     Json?    // Structured content or text
+  status      ProposalStatus @default(DRAFT)
+  
+  clientId    String
+  client      ClientProfile @relation(fields: [clientId], references: [id])
+  
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  
+  totalAmount Decimal?
+  currency    String   @default("USD")
+  validUntil  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  title       String
+  content     String?  @db.Text // HTML or Markdown content
+  status      ContractStatus @default(DRAFT)
+  
+  clientId    String
+  client      ClientProfile @relation(fields: [clientId], references: [id])
+  
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  
+  signedByClient Boolean @default(false)
+  signedAt       DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ReviewStatus {
+  NONE
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TicketStatus @default(OPEN)
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id])
+  
+  createdById String
+  createdBy   User         @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  assignedToId  String?
+  assignedTo    User?    @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  
+  managerId     String?
+  manager       User?    @relation("ManagedTickets", fields: [managerId], references: [id])
+  
+  reviewStatus  ReviewStatus @default(NONE)
+
+  // Client review/rating (when approved)
+  rating       Int?     // 1-5 stars
+  clientReview String?  // Written review from client
+
+  // Deadline management
+  deadline     DateTime?
+
+  isBillable  Boolean      @default(true)
+  
+  invoiceItems InvoiceItem[]
+  comments     Comment[]
+  revisionHistory RevisionHistory[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  imageUrl  String?  // Optional image attachment
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+  reactions CommentReaction[]
+
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+}
+
+model CommentReaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([commentId, userId, emoji])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  clientId        String
+  client          ClientProfile @relation(fields: [clientId], references: [id])
+  
+  status          InvoiceStatus @default(DRAFT)
+  
+  // Invoice Numbers
+  proformaNumber  Int?
+  invoiceNumber   Int?
+  
+  // Currency and Tax
+  currency        String   @default("INR")  // INR, USD, EUR, GBP
+  taxType         String?  @default("NONE") // GST, VAT, NONE
+  taxRate         Decimal? @default(0)      // Overall tax rate %
+  clientGstNumber String?                   // Client's GST at invoice time
+  
+  // Amounts
+  subtotal        Decimal  @default(0)      // Before tax
+  taxAmount       Decimal  @default(0)      // Calculated tax
+  totalAmount     Decimal  @default(0)      // After tax
+  
+  // Payment Info
+  paidDate        DateTime?
+  paymentMethod   String?
+  paymentNotes    String?
+  
+  // Invoice Notes
+  notes           String?                   // Additional notes/terms
+  
+  // Razorpay Integration
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+
+  items           InvoiceItem[]
+  
+  proformaDate    DateTime?
+  issueDate       DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  ticketId    String?
+  ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+  
+  description String
+  hsnCode     String?                   // HSN/SAC Code
+  quantity    Decimal  @default(1)
+  rate        Decimal
+  
+  // Tax Calculation
+  taxRate     Decimal  @default(0)      // Item-specific tax %
+  subtotal    Decimal  @default(0)      // quantity * rate
+  taxAmount   Decimal  @default(0)      // subtotal * (taxRate / 100)
+  amount      Decimal                   // subtotal + taxAmount
+  
+  createdAt   DateTime @default(now())
+}
+
+model Settings {
+  id            String   @id @default(cuid())
+  
+  // SMTP (Email) Configuration - Works with Brevo SMTP
+  smtpHost      String?
+  smtpPort      Int?     @default(587)
+  smtpUsername  String?
+  smtpPassword  String?
+  smtpFromEmail String?
+  smtpFromName  String?  @default("PM System")
+  
+  // Razorpay (Payment) Configuration
+  razorpayKeyId     String?
+  razorpayKeySecret String?
+  
+  // AI Configuration
+  geminiApiKey      String?
+  
+  // Email Notification Preferences
+  emailOnTicketCreated       Boolean @default(true)
+  emailOnTicketAssigned      Boolean @default(true)
+  emailOnTicketStatusChange  Boolean @default(false)
+  emailOnReviewRequested     Boolean @default(true)
+  emailOnReviewApproved      Boolean @default(true)
+  emailOnCommentAdded        Boolean @default(false)
+  emailOnInvoiceCreated      Boolean @default(true)
+  emailOnInvoicePaid         Boolean @default(true)
+  emailOnDeadlineApproaching Boolean @default(true)
+  emailOnProjectCreated      Boolean @default(false)
+  
+  // Email Templates & Features
+  enableInvoiceEmails        Boolean @default(true)
+  paymentReminderEnabled     Boolean @default(true)
+  paymentReminderMessage     String? @default("This is a gentle reminder that invoice {invoice_number} for {amount} is pending payment. Please process the payment at your earliest convenience. Thank you!")
+  
+  // Company/Billing Details
+  companyName       String?
+  companyAddress    String?
+  companyGst        String?
+  companyEmail      String?
+  companyPhone      String?
+  companyWebsite    String?
+  
+  // Exchange Rates (for currency conversion)
+  usdToInrRate      Decimal?  @default(84)
+  eurToInrRate      Decimal?  @default(90)
+  gbpToInrRate      Decimal?  @default(105)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model RevisionHistory {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  type      String   // SUBMITTED, REVISION_REQUESTED, APPROVED
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  message   String?
+  images    String[] // Array of image URLs
+  
+  createdAt DateTime @default(now())
+  
+  @@index([ticketId])
+}

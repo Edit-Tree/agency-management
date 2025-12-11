@@ -1,0 +1,19 @@
+model Settings {
+  id            String   @id @default(cuid())
+  
+  // SMTP Configuration
+  smtpHost      String?
+  smtpPort      Int?     @default(587)
+  smtpUser      String?
+  smtpPassword  String?  // Should be encrypted
+  smtpFrom      String?
+  smtpFromName  String?  @default("PM System")
+  smtpSecure    Boolean  @default(false)
+  
+  // Payment Configuration (for future)
+  stripeSecretKey String?
+  stripePublicKey String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
