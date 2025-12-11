@@ -35,7 +35,7 @@ export default async function ClientsPage() {
                         </DialogHeader>
                         <form action={async (formData) => {
                             'use server'
-                            await createClient(formData)
+                            void await createClient(formData)
                         }} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Contact Name</Label>
@@ -98,7 +98,7 @@ export default async function ClientsPage() {
                                     </DialogHeader>
                                     <form action={async (formData) => {
                                         'use server'
-                                        await updateClient(client.id, formData)
+                                        void await updateClient(client.id, formData)
                                     }} className="space-y-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="name">Contact Name</Label>
