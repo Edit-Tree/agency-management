@@ -32,7 +32,10 @@ export default async function UsersPage() {
                         <DialogHeader>
                             <DialogTitle>Add New User</DialogTitle>
                         </DialogHeader>
-                        <form action={createUser} className="space-y-4 mt-4">
+                        <form action={async (formData) => {
+                            'use server'
+                            void await createUser(formData)
+                        }} className="space-y-4 mt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Name</Label>
                                 <Input id="name" name="name" required />
@@ -109,7 +112,7 @@ export default async function UsersPage() {
                                                     <form action={async (formData) => {
                                                         'use server'
                                                         const { updateUser } = await import("@/app/actions/users")
-                                                        await updateUser(user.id, formData)
+                                                        void await updateUser(user.id, formData)
                                                     }} className="space-y-4 mt-4">
                                                         <div className="space-y-2">
                                                             <Label htmlFor="name">Name</Label>
@@ -146,7 +149,7 @@ export default async function UsersPage() {
                                             <form action={async () => {
                                                 'use server'
                                                 const { deleteUser } = await import("@/app/actions/users")
-                                                await deleteUser(user.id)
+                                                void await deleteUser(user.id)
                                             }}>
                                                 <Button variant="destructive" size="sm" type="submit">Delete</Button>
                                             </form>
