@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { PrismaClient, Role, TicketStatus } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
