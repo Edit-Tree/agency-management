@@ -66,8 +66,8 @@ export default async function PortalTicketPage({ params }: PortalTicketPageProps
                                     <AvatarFallback>{comment.author.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div className={`max-w-[80%] p-3 rounded-lg text-sm ${comment.authorId === session?.user?.id
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-white dark:bg-gray-800 border'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-white dark:bg-gray-800 border'
                                     }`}>
                                     <div className="font-semibold text-xs mb-1 opacity-70">
                                         {comment.author.name} • {format(new Date(comment.createdAt), 'p')}
@@ -81,7 +81,7 @@ export default async function PortalTicketPage({ params }: PortalTicketPageProps
                     <div className="p-4 border-t bg-white dark:bg-gray-800">
                         <form action={async (formData) => {
                             'use server'
-                            await addComment(id, formData.get('content') as string)
+                            void await addComment(id, formData.get('content') as string)
                         }} className="flex gap-2">
                             <Textarea name="content" placeholder="Type a message..." className="min-h-[2.5rem] max-h-32" required />
                             <Button type="submit">Send</Button>
@@ -103,13 +103,13 @@ export default async function PortalTicketPage({ params }: PortalTicketPageProps
                                 <div className="flex gap-2">
                                     <form action={async () => {
                                         'use server'
-                                        await updateReviewStatus(id, 'APPROVED')
+                                        void await updateReviewStatus(id, 'APPROVED')
                                     }} className="flex-1">
                                         <Button className="w-full" variant="default">Approve</Button>
                                     </form>
                                     <form action={async () => {
                                         'use server'
-                                        await updateReviewStatus(id, 'REJECTED')
+                                        void await updateReviewStatus(id, 'REJECTED')
                                     }} className="flex-1">
                                         <Button className="w-full" variant="destructive">Reject</Button>
                                     </form>

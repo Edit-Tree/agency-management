@@ -35,7 +35,7 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
                 <CardContent>
                     <form action={async (formData) => {
                         'use server'
-                        await updateProject(id, formData)
+                        void await updateProject(id, formData)
                     }} className="space-y-6">
                         <div className="space-y-2">
                             <Label htmlFor="title">Project Title</Label>
