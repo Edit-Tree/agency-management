@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 
+export const dynamic = 'force-dynamic'
+
 export default async function PortalInvoicesPage() {
     // This would be filtered by client in a real implementation
     const invoices = await prisma.invoice.findMany({
