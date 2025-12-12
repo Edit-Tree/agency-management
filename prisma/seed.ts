@@ -81,6 +81,17 @@ async function main() {
         ],
     })
 
+    // Create Settings
+    await prisma.settings.upsert({
+        where: { id: 'default' },
+        update: {},
+        create: {
+            id: 'default',
+            smtpFromName: 'PM System',
+            smtpPort: 587,
+        },
+    })
+
     console.log({ admin, clientUser, project })
 }
 
